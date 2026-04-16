@@ -12,6 +12,9 @@ from rich.console import Console
 
 console = Console()
 
+# 产物输出根目录，可通过环境变量 POLYAGENT_OUTPUT_DIR 覆盖，默认 "user"
+_OUT = os.environ.get("POLYAGENT_OUTPUT_DIR", "user")
+
 
 def _parse_req_log(stdout: str) -> dict:
     """从测试 stdout 中解析 _req() 打印的结构化日志。"""
@@ -128,7 +131,7 @@ def _generate_md_report(json_path: str, md_path: str, base_url: str, token_set: 
 
 def swagger_post_run():
     """swagger 生成完成后，询问是否运行测试，收集凭证后执行 pytest 并生成 MD 报告。"""
-    test_files = sorted(_glob.glob("user/tests/test_api_*.py"))
+    test_files = sorted(_glob.glob(os.path.join(_OUT, "tests", "test_api_*.py")))
     if not test_files:
         return
 
@@ -174,12 +177,12 @@ def swagger_post_run():
     if login_user: config_parts.append(f"LOGIN_USERNAME={login_user}")
     console.print(f"\n[dim]  {'  '.join(config_parts)}[/dim]")
 
-    # 独立测试 venv（user/.venv），不污染主项目依赖
-    venv_dir = os.path.join("user", ".venv")
+    # 独立测试 venv，不污染主项目依赖
+    venv_dir = os.path.join(_OUT, ".venv")
     test_py  = os.path.join(venv_dir, "Scripts" if platform.system() == "Windows" else "bin", "python")
 
     if not os.path.exists(test_py):
-        console.print("[dim]  初始化测试环境（user/.venv）...[/dim]")
+        console.print(f"[dim]  初始化测试环境（{venv_dir}）...[/dim]")
         subprocess.run([sys.executable, "-m", "venv", venv_dir], check=True)
 
     subprocess.run(
@@ -191,10 +194,11 @@ def swagger_post_run():
         [test_py, "-c", "import pytest_jsonreport"], env=env, capture_output=True,
     ).returncode == 0
 
-    os.makedirs("user/reports", exist_ok=True)
+    reports_dir = os.path.join(_OUT, "reports")
+    os.makedirs(reports_dir, exist_ok=True)
     ts          = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    report_json = f"user/reports/report_{ts}.json"
-    report_md   = f"user/reports/report_{ts}.md"
+    report_json = os.path.join(reports_dir, f"report_{ts}.json")
+    report_md   = os.path.join(reports_dir, f"report_{ts}.md")
 
     console.print()
     console.print("[bold cyan]━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[/bold cyan]")
@@ -202,7 +206,7 @@ def swagger_post_run():
     console.print("[bold cyan]━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[/bold cyan]")
     console.print()
 
-    pytest_cmd = [test_py, "-m", "pytest", "user/tests/", "-v", "--tb=line"]
+    pytest_cmd = [test_py, "-m", "pytest", os.path.join(_OUT, "tests"), "-v", "--tb=line"]
     if json_report_ok:
         pytest_cmd += ["--json-report", f"--json-report-file={report_json}"]
 

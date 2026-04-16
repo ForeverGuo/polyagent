@@ -4,7 +4,7 @@ import pytest
 import requests
 
 # ─── 运行配置 ────────────────────────────────────────────────────────────────
-BASE_URL = os.environ.get("BASE_URL", "https://api-dev.welltivity.cn/api/admin").rstrip("/")
+BASE_URL = os.environ.get("BASE_URL", "http://localhost:8000").rstrip("/")
 TOKEN    = os.environ.get("TOKEN", "")
 
 # Token 与 Authorization 设置相同的值，兼容不同接口的鉴权方式

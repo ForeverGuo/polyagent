@@ -1,4 +1,5 @@
 """Agent 流式执行与终端 UI 渲染。"""
+import re
 import sys
 import subprocess
 
@@ -157,3 +158,67 @@ def run_agent_with_ui(user_task: str) -> bool:
         console.print("\n[bold yellow]⏹  已中断，输入下一个任务[/bold yellow]")
 
     return saw_swagger and completed
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Skill 保存提示
+# ─────────────────────────────────────────────────────────────────────────────
+
+def prompt_save_skill(original_task: str) -> None:
+    """任务完成后询问用户是否保存为 Skill。"""
+    from cli.skills import make_skill, save_skill
+
+    console.print()
+    try:
+        answer = input("\033[2m  💾 保存为 Skill 以便复用？[y/N] \033[0m").strip().lower()
+    except (KeyboardInterrupt, EOFError):
+        return
+
+    if answer not in ("y", "yes"):
+        return
+
+    try:
+        name = input("  Skill 名称（如 my-api-test）: ").strip()
+        if not name:
+            console.print("[dim]  已取消[/dim]")
+            return
+        if not re.match(r"^[\w\-]+$", name):
+            console.print("[bold red]  名称只允许字母、数字、连字符和下划线[/bold red]")
+            return
+
+        description = input("  描述（可选，回车跳过）: ").strip()
+
+        console.print(f"  [dim]Prompt 模板（直接回车使用原始任务；可用 {{变量}} 作为占位符）:[/dim]")
+        console.print(f"  [dim]当前：{original_task}[/dim]")
+        prompt_input = input("  > ").strip()
+        prompt = prompt_input if prompt_input else original_task
+
+        # 收集环境变量
+        env: dict[str, str] = {}
+        console.print("  [dim]绑定环境变量（如 BASE_URL=http://... ），回车结束：[/dim]")
+        console.print("  [dim]⚠️  TOKEN / API_KEY 等敏感值建议留空，运行时从 .env 读取[/dim]")
+        while True:
+            pair = input("  ENV > ").strip()
+            if not pair:
+                break
+            if "=" in pair:
+                k, v = pair.split("=", 1)
+                k = k.strip()
+                # 敏感键自动置空并提示
+                _sensitive = ("token", "key", "secret", "password", "passwd", "pwd")
+                if any(s in k.lower() for s in _sensitive) and v.strip():
+                    console.print(f"  [bold yellow]  ⚠️  {k} 含敏感信息，已置空（请在 .env 中配置）[/bold yellow]")
+                    env[k] = ""
+                else:
+                    env[k] = v.strip()
+            else:
+                console.print(f"  [dim]格式错误，跳过：{pair}[/dim]")
+
+    except (KeyboardInterrupt, EOFError):
+        console.print("\n[dim]  已取消[/dim]")
+        return
+
+    skill = make_skill(name, description, prompt, env)
+    path = save_skill(skill)
+    console.print(f"\n[bold green]  ✅ Skill 已保存：{name}[/bold green]  [dim]{path}[/dim]")
+    console.print(f"  [dim]运行：polyagent skill run {name}[/dim]")

@@ -1,18 +1,21 @@
 from langchain_core.tools import tool
 import os
 
+# 产物输出根目录，可通过环境变量 POLYAGENT_OUTPUT_DIR 覆盖，默认 "user"
+_OUT = os.environ.get("POLYAGENT_OUTPUT_DIR", "user")
+
 @tool
 def write_file(path: str, content: str):
     """在指定路径创建或覆盖文件。path 是相对路径。
-    - 测试用例文件必须保存到 user/tests/ 目录下
-    - 测试报告保存到 user/reports/ 目录下
-    - 其他生成代码保存到 user/ 目录下
+    - 测试用例文件必须保存到 {OUTPUT_DIR}/tests/ 目录下
+    - 测试报告保存到 {OUTPUT_DIR}/reports/ 目录下
+    - 其他生成代码保存到 {OUTPUT_DIR}/ 目录下
     """
-    # 测试文件强制放到 user/tests/
+    # 测试文件强制放到 {_OUT}/tests/
     filename = os.path.basename(path)
     if filename.startswith("test_") or filename.endswith("_test.py"):
-        if not path.startswith("user/tests/"):
-            path = os.path.join("user/tests", filename)
+        if not path.startswith(os.path.join(_OUT, "tests")):
+            path = os.path.join(_OUT, "tests", filename)
 
     dir_name = os.path.dirname(path)
     if dir_name:

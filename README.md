@@ -4,21 +4,22 @@
 
 ## 功能链路
 
-| 链路 | 触发关键词示例 | 说明 |
-|------|--------------|------|
-| **design** | "设计一个抽奖系统"、"出订单模块的表结构" | 产品方案 → 技术架构 → 数据库设计 → SQL DDL → 服务端代码（FastAPI / Spring Boot / Gin 等）→ 前端代码（Vue3 / React 等） |
-| **code** | "帮我写一个爬虫"、"创建一个 REST API" | architect 拆解任务 → coder 逐步实现 → tester 验收，支持自动修复循环 |
-| **chat** | "解释这段代码"、"Redis 和 Memcached 的区别" | 通用对话，支持联网搜索（Tavily） |
-| **test** | "测试这个文件有没有 Bug" | 对已有代码运行测试，自动定位并修复问题 |
-| **swagger** | "根据这个 Swagger 地址生成测试用例" | 解析 Swagger / OpenAPI 文档或接口描述文件，自动生成 pytest 测试用例 |
-| **ui** | "打开 example.com 测试登录功能" | planner 拆解子任务 → tester 控制 Playwright 执行，支持网络请求捕获、语义化表单填写、登录态持久化、测试报告输出 |
+
+| 链路        | 触发关键词示例                              | 说明                                                                                                                        |
+| ----------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| **design**  | "设计一个抽奖系统"、"出订单模块的表结构"    | 产品方案 → 技术架构 → 数据库设计 → SQL DDL → 服务端代码（FastAPI / Spring Boot / Gin 等）→ 前端代码（Vue3 / React 等） |
+| **code**    | "帮我写一个爬虫"、"创建一个 REST API"       | architect 拆解任务 → coder 逐步实现 → tester 验收，支持自动修复循环                                                       |
+| **chat**    | "解释这段代码"、"Redis 和 Memcached 的区别" | 通用对话，支持联网搜索（Tavily）                                                                                            |
+| **test**    | "测试这个文件有没有 Bug"                    | 对已有代码运行测试，自动定位并修复问题                                                                                      |
+| **swagger** | "根据这个 Swagger 地址生成测试用例"         | 解析 Swagger / OpenAPI 文档或接口描述文件，自动生成 pytest 测试用例                                                         |
+| **ui**      | "打开 example.com 测试登录功能"             | planner 拆解子任务 → tester 控制 Playwright 执行，支持网络请求捕获、语义化表单填写、登录态持久化、测试报告输出             |
 
 ## 快速开始
 
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/your-username/polyagent.git
+git clone https://github.com/ForeverGuo/polyagent.git
 cd polyagent
 ```
 
@@ -58,12 +59,13 @@ TAVILY_API_KEY=your-tavily-key-here
 
 支持任意 OpenAI 兼容服务：
 
-| 服务商 | API_BASE | MODEL 示例 |
-|--------|----------|-----------|
-| OpenAI | `https://api.openai.com/v1` | `gpt-4o` |
-| SiliconFlow | `https://api.siliconflow.cn/v1` | `Pro/zai-org/GLM-4.7` |
-| Azure OpenAI | `https://<resource>.openai.azure.com/` | `gpt-4o` |
-| Ollama（本地）| `http://localhost:11434/v1` | `llama3.2` |
+
+| 服务商         | API_BASE                               | MODEL 示例            |
+| -------------- | -------------------------------------- | --------------------- |
+| OpenAI         | `https://api.openai.com/v1`            | `gpt-4o`              |
+| SiliconFlow    | `https://api.siliconflow.cn/v1`        | `Pro/zai-org/GLM-4.7` |
+| Azure OpenAI   | `https://<resource>.openai.azure.com/` | `gpt-4o`              |
+| Ollama（本地） | `http://localhost:11434/v1`            | `llama3.2`            |
 
 ### 4. 运行
 

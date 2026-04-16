@@ -5,6 +5,19 @@ description = "Multi-agent framework for code generation, API testing, and UI au
 readme = "README.md"
 requires-python = ">=3.13"
 license = { text = "MIT" }
+keywords = ["agent", "llm", "cli", "automation", "testing", "langgraph", "playwright", "openai"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Software Development :: Code Generators",
+    "Environment :: Console",
+    "Operating System :: OS Independent",
+]
+
 dependencies = [
     "python-dotenv>=1.0.0",
     "httpx[socks]>=0.28.1",
@@ -17,7 +30,14 @@ dependencies = [
     "typer>=0.24.1",
     "readchar>=4.2.2",
     "requests>=2.33.0",
+    "prompt-toolkit>=3.0.0",
 ]
+
+[project.urls]
+Homepage   = "https://github.com/your-username/polyagent"
+Repository = "https://github.com/your-username/polyagent"
+Issues     = "https://github.com/your-username/polyagent/issues"
+Changelog  = "https://github.com/your-username/polyagent/blob/main/CHANGELOG.md"
 
 [project.scripts]
 polyagent = "cli.main:main_cli"

@@ -10,7 +10,8 @@ import threading
 from urllib.parse import urlparse, parse_qs
 from langchain_core.tools import tool
 
-_SCREENSHOT_DIR = "user/screenshots"
+_OUT = os.environ.get("POLYAGENT_OUTPUT_DIR", "user")
+_SCREENSHOT_DIR = os.path.join(_OUT, "screenshots")
 
 # ─── 网络请求捕获状态 ──────────────────────────────────────────────────────────
 
@@ -21,7 +22,7 @@ _capture_state: dict = {
     "requests": [],
 }
 
-_SESSION_DIR = "user/session"
+_SESSION_DIR = os.path.join(_OUT, "session")
 _browser_state: dict = {}  # 持有 pw / browser / context / page 引用，供 save/load state 使用
 
 def _on_response(response):
