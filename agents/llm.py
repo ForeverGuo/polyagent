@@ -4,6 +4,7 @@ import json
 import time
 import functools
 from pathlib import Path
+import httpx
 from langchain_openai import ChatOpenAI
 
 # 优先加载用户全局配置（polyagent init 写入），再 fallback 到当前目录 .env
@@ -64,8 +65,24 @@ def node_retry(max_attempts: int = 3, base_delay: float = 3.0):
     return decorator
 
 
+def _build_http_client() -> httpx.Client | None:
+    """根据环境变量构造自定义 httpx 客户端（处理企业 SSL 代理）。"""
+    ssl_verify_env = os.getenv("SSL_VERIFY", "true").lower()
+    ca_bundle = os.getenv("SSL_CA_BUNDLE", "")
+
+    if ssl_verify_env in ("false", "0", "no"):
+        verify: bool | str = False
+    elif ca_bundle:
+        verify = ca_bundle
+    else:
+        return None  # 使用默认客户端
+
+    return httpx.Client(verify=verify)
+
+
 def get_llm(max_tokens: int = 8192):
-    return ChatOpenAI(
+    http_client = _build_http_client()
+    kwargs = dict(
         model=MODEL,
         api_key=API_KEY,
         base_url=API_BASE,
@@ -73,3 +90,6 @@ def get_llm(max_tokens: int = 8192):
         max_tokens=max_tokens,
         streaming=True,
     )
+    if http_client is not None:
+        kwargs["http_client"] = http_client
+    return ChatOpenAI(**kwargs)

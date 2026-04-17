@@ -140,6 +140,17 @@ def cmd_init():
 
     console.print()
     console.print(f"[bold green]✅ 配置已保存到 {config_file}[/bold green]")
+
+    # 提示安装浏览器（UI 自动化依赖）
+    console.print()
+    console.print("[bold]── 浏览器依赖（UI 自动化功能需要）──────────────[/bold]")
+    if typer.confirm("  安装 Chromium 浏览器？（约 150MB，UI 测试功能必须）", default=True):
+        from tools.browser import ensure_chromium
+        ensure_chromium(verbose=True)
+    else:
+        console.print("  [dim]跳过，如需 UI 测试请之后手动运行：playwright install chromium[/dim]")
+
+    console.print()
     console.print("[dim]运行 [bold]polyagent[/bold] 开始使用[/dim]")
 
 

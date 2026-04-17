@@ -6,9 +6,66 @@ Playwright 浏览器工具集。
 """
 import os
 import queue
+import subprocess
+import sys
 import threading
+from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 from langchain_core.tools import tool
+
+# ─── Chromium 自动安装 ─────────────────────────────────────────────────────────
+
+_PLAYWRIGHT_READY_MARKER = Path.home() / ".polyagent" / ".playwright_ready"
+
+
+def _is_chromium_installed() -> bool:
+    """检查 Chromium 可执行文件是否存在。"""
+    if _PLAYWRIGHT_READY_MARKER.exists():
+        return True
+    try:
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as p:
+            if Path(p.chromium.executable_path).exists():
+                _PLAYWRIGHT_READY_MARKER.parent.mkdir(parents=True, exist_ok=True)
+                _PLAYWRIGHT_READY_MARKER.touch()
+                return True
+    except Exception:
+        pass
+    return False
+
+
+def ensure_chromium(verbose: bool = True) -> bool:
+    """
+    确保 Chromium 已安装，未安装时自动下载（约 150MB，仅首次）。
+    Linux 下同时安装系统依赖（libnss / libatk 等），macOS / Windows 无需此步骤。
+    verbose=True 时打印进度，返回是否安装成功。
+    """
+    if _is_chromium_installed():
+        return True
+
+    is_linux = sys.platform.startswith("linux")
+    size_hint = "约 150MB" if not is_linux else "约 150MB + 系统依赖"
+    if verbose:
+        print(f"⏳ 首次使用浏览器功能，正在安装 Chromium（{size_hint}，仅需一次）...", flush=True)
+
+    # Linux 用 --with-deps 同时安装系统库，避免 libnss/libatk 缺失导致启动失败
+    cmd = [sys.executable, "-m", "playwright", "install"]
+    if is_linux:
+        cmd.append("--with-deps")
+    cmd.append("chromium")
+
+    result = subprocess.run(cmd, capture_output=not verbose, text=True)
+    if result.returncode == 0:
+        _PLAYWRIGHT_READY_MARKER.parent.mkdir(parents=True, exist_ok=True)
+        _PLAYWRIGHT_READY_MARKER.touch()
+        if verbose:
+            print("✅ Chromium 安装完成", flush=True)
+        return True
+    else:
+        manual_cmd = "playwright install --with-deps chromium" if is_linux else "playwright install chromium"
+        if verbose:
+            print(f"⚠️  Chromium 安装失败，请手动运行：{manual_cmd}", flush=True)
+        return False
 
 _OUT = os.environ.get("POLYAGENT_OUTPUT_DIR", "user")
 _SCREENSHOT_DIR = os.path.join(_OUT, "screenshots")
@@ -160,9 +217,10 @@ def _playwright_worker():
 
 
 def _ensure_worker():
-    """确保后台线程已启动"""
+    """确保后台线程已启动，首次调用时自动安装 Chromium。"""
     global _worker_thread
     if _worker_thread is None or not _worker_thread.is_alive():
+        ensure_chromium(verbose=True)  # 已安装时立即返回，无性能损耗
         _worker_started.clear()
         _worker_thread = threading.Thread(target=_playwright_worker, daemon=True)
         _worker_thread.start()
@@ -358,7 +416,7 @@ def browser_scroll(direction: str = "down", distance: int = 500) -> str:
     def _fn(page):
         delta = distance if direction == "down" else -distance
         page.evaluate(f"window.scrollBy(0, {delta})")
-        page.wait_for_timeout(300)
+        page.wait_for_timeout(100)
         return f"已向{'下' if direction == 'down' else '上'}滚动 {distance}px"
     return _run_in_browser(_fn)
 
@@ -371,7 +429,7 @@ def browser_hover(selector: str) -> str:
     """
     def _fn(page):
         page.hover(selector, timeout=10000)
-        page.wait_for_timeout(400)
+        page.wait_for_timeout(150)
         return f"已悬停：{selector}"
     return _run_in_browser(_fn)
 

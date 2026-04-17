@@ -1,12 +1,13 @@
+import os
 from agents.llm import get_llm, node_retry
 from graphs.state import AgentState
 from tools.browser import ALL_BROWSER_TOOLS
-from tools.file_ops import write_file
+from tools.file_ops import write_file, read_file
 from prompts.loader import PromptLoader
 from langchain_core.messages import ToolMessage
 
 prompt_loader = PromptLoader()
-ui_tester_llm = get_llm().bind_tools([*ALL_BROWSER_TOOLS, write_file])
+ui_tester_llm = get_llm().bind_tools([*ALL_BROWSER_TOOLS, write_file, read_file])
 
 
 @node_retry()
@@ -32,6 +33,7 @@ def ui_tester_node(state: AgentState):
         )
 
         _is_last = (ui_step == total - 1)
+        _remaining = total - ui_step - 1
         step_prompt = (
             f"\n\n## 当前执行：子任务 [{ui_step + 1}/{total}]\n"
             f"{current_task}\n\n"
@@ -40,14 +42,21 @@ def ui_tester_node(state: AgentState):
                 "✅ **这是最后一个子任务**，完成后输出**完整最终报告**（含所有子任务汇总），"
                 "调用 write_file 保存报告，最后调用 browser_close 关闭浏览器。"
                 if _is_last else
+                f"⛔ **禁止调用 browser_close** — 后面还有 {_remaining} 个子任务，浏览器必须保持开启。\n"
                 "完成本子任务后输出**子任务报告**（格式：'### 子任务 [N/total] 完成'），"
-                "**不要**输出'整体评估'等最终语气，**不要**调用 browser_close。"
+                "**不要**输出'整体评估'等最终语气。"
             )
         )
         # 始终用滑动窗口传递近期消息，保证 agent 无论处于哪个子任务边界都能感知当前浏览器状态
         # 原因：子任务边界的"硬重置"会导致 agent 不知道当前页面，重新规划、重新导航
         last_msg = state["messages"][-1]
-        recent_msgs = state["messages"][-30:]
+        _window = int(os.environ.get("UI_MSG_WINDOW", "10"))
+        recent_msgs = list(state["messages"][-_window:])
+
+        # 修复孤立 ToolMessage：若窗口开头是 ToolMessage，其对应的 AIMessage(tool_calls)
+        # 已被切出窗口，OpenAI 协议会报 400。向前移动起点直到首条非 ToolMessage。
+        while recent_msgs and isinstance(recent_msgs[0], ToolMessage):
+            recent_msgs.pop(0)
 
         # 子任务切换时（last_msg 是 AI 消息，非工具结果）：注入前序进度 + 历史成果摘要
         if not isinstance(last_msg, ToolMessage) and ui_step > 0:
@@ -58,7 +67,7 @@ def ui_tester_node(state: AgentState):
             # 只取 AI 消息（非工具消息），截取前 300 字，让 agent 看到实际完成了什么
             from langchain_core.messages import AIMessage
             accomplishments = []
-            for msg in reversed(state["messages"][-30:]):
+            for msg in reversed(state["messages"][-_window:]):
                 if isinstance(msg, AIMessage) and msg.content and not getattr(msg, "tool_calls", None):
                     accomplishments.append(msg.content[:300])
                     if len(accomplishments) >= 3:  # 最多取最近3条报告

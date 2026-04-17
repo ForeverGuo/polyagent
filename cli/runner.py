@@ -102,7 +102,23 @@ def run_agent_with_ui(user_task: str) -> bool:
     spinner.start()
 
     try:
-        for chunk, metadata in app.stream(inputs, stream_mode="messages"):
+        for mode, payload in app.stream(inputs, stream_mode=["messages", "updates"]):
+            # ── 状态更新事件（非消息流，用于检测子任务切换等纯 state 变更节点）──
+            if mode == "updates":
+                for node_name, state_update in payload.items():
+                    if node_name == "ui_advance":
+                        # 子任务步进：重置 AI 流状态，重启 spinner 给用户明确的进度反馈
+                        # 此处是子任务 1 结束 → 子任务 2 开始的间隙，原本完全无视觉输出
+                        if in_ai_stream:
+                            write("\n")
+                            in_ai_stream = False
+                        next_step = state_update.get("ui_step", 1)
+                        spinner.stop()
+                        spinner.start(f"[bold cyan]⏩ 子任务 {next_step} 准备中...[/bold cyan]")
+                continue
+
+            # ── 消息流事件（LLM token / ToolMessage）──────────────────────────
+            chunk, metadata = payload
             node = metadata.get("langgraph_node", "")
 
             if node in ("swagger_agent", "swagger_tools"):

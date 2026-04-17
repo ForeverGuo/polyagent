@@ -322,23 +322,26 @@ def route_after_ui_tools(state: AgentState):
     """
     ui_tools 节点出口：区分"浏览器操作"和"任务收尾"两类工具的后续动作。
 
-    三种情况：
-      1. 最后执行的是 browser_close          → END（浏览器已关闭，任务彻底结束）
-      2. 最后执行的是 write_file 且已是最后一个子任务（或无子任务） → END
+    四种情况：
+      1. 最后执行的是 browser_close 且已是最后子任务（或无子任务） → END
+      2. 最后执行的是 browser_close 但还有子任务未完成           → ui_advance
+         防止 LLM 在非最后子任务提前调用 browser_close 终止整个测试
+      3. 最后执行的是 write_file 且已是最后一个子任务（或无子任务） → END
          避免写完报告后又重新进 ui_tester 导致重复测试
-      3. 其他（浏览器操作完成）              → ui_tester（继续分析结果）
+      4. 其他（浏览器操作完成）                                   → ui_tester（继续分析结果）
     """
     from langchain_core.messages import ToolMessage
     last_msg = state["messages"][-1]
     if isinstance(last_msg, ToolMessage):
         tool_name = getattr(last_msg, "name", "")
+        ui_plan = state.get("ui_plan", [])
+        ui_step = state.get("ui_step", 0)
+        is_last = not ui_plan or ui_step >= len(ui_plan) - 1
         if tool_name == "browser_close":
+            # 非最后子任务提前 close：强制步进到下一个子任务（浏览器工具会自动重启）
+            return END if is_last else "ui_advance"
+        if tool_name == "write_file" and is_last:
             return END
-        if tool_name == "write_file":
-            ui_plan = state.get("ui_plan", [])
-            ui_step = state.get("ui_step", 0)
-            if not ui_plan or ui_step >= len(ui_plan) - 1:
-                return END
     return "ui_tester"
 
 

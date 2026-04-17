@@ -1,5 +1,5 @@
 [project]
-name = "polyagent"
+name = "polyagent-ai"
 version = "0.1.0"
 description = "Multi-agent framework for code generation, API testing, and UI automation"
 readme = "README.md"
@@ -34,10 +34,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage   = "https://github.com/your-username/polyagent"
-Repository = "https://github.com/your-username/polyagent"
-Issues     = "https://github.com/your-username/polyagent/issues"
-Changelog  = "https://github.com/your-username/polyagent/blob/main/CHANGELOG.md"
+Homepage   = "https://github.com/ForeverGuo/polyagent"
+Repository = "https://github.com/ForeverGuo/polyagent"
+Issues     = "https://github.com/ForeverGuo/polyagent/issues"
+Changelog  = "https://github.com/ForeverGuo/polyagent/blob/main/CHANGELOG.md"
 
 [project.scripts]
 polyagent = "cli.main:main_cli"
@@ -45,9 +45,12 @@ polyagent = "cli.main:main_cli"
 [tool.hatch.build.targets.wheel]
 packages = ["agents", "graphs", "tools", "prompts", "schema", "cli"]
 
-[tool.hatch.build.targets.wheel.force-include]
-"prompts/system_prompts" = "prompts/system_prompts"
-
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "build>=1.4.3",
+    "twine>=6.2.0",
+]
